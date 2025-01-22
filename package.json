@@ -1,0 +1,25 @@
+{
+  "name": "avant-protocol",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chainsaw2k25/Avant-Protocol.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/chainsaw2k25/Avant-Protocol/issues"
+  },
+  "homepage": "https://github.com/chainsaw2k25/Avant-Protocol#readme",
+  "dependencies": {
+    "axios": "^1.7.9",
+    "discord.js": "^14.17.3",
+    "dotenv": "^16.4.7",
+    "ethers": "^6.13.5"
+  }
+}
