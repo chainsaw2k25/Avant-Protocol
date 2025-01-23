@@ -92,7 +92,7 @@ const depositContractAddress = process.env.DEPOSIT_CONTRACT_ADDRESS;
 const AVALANCHE_WS_URL = process.env.AVALANCHE_WS_URL;
 const provider = new ethers.WebSocketProvider(AVALANCHE_WS_URL);
 
-const discordWebhookUrl = process.env.DISCORD_WEBHOOK_URL; // Access the variable from the .env file
+const discordWebhookUrl = process.env.DISCORD_WEBHOOK_URL; 
 
 const mintContract = new ethers.Contract(mintContractAddress, mintContractABI, provider);
 const depositContract = new ethers.Contract(depositContractAddress, depositContractABI, provider);
@@ -107,7 +107,7 @@ async function sendToWebhook(message) {
 }
 
 
-sendToWebhook("**🚨Avant Event Bot is active**");
+// sendToWebhook("**🚨Avant Event Bot is active**");
 
 mintContract.on('Mint', async (minter, benefactor, beneficiary, collateralAsset, collateralAmount, avusdAmount) => {
   console.log('Mint Event Detected:');
@@ -118,10 +118,10 @@ mintContract.on('Mint', async (minter, benefactor, beneficiary, collateralAsset,
 const formattedCollateralAmount = (Number(collateralAmount) / 10 ** 6).toFixed(2); 
 const formattedAvusdAmount = (Number(avusdAmount) / 10 ** 18).toFixed(2); 
 
-const truncatedBeneficiary = `${owner.slice(0, 5)}#####`; 
+const truncatedBeneficiary = `${beneficiary.slice(0, 5)}#####`; 
     
     const mintMessage = `
-    **🚨New Mint Alert!**
+    **🚨New Mint Alert!🚨**
     **Minter**: ${truncatedBeneficiary}
     **Collateral Asset**: ${formattedCollateralAmount} USDC
     **AvUSD Minted**: ${formattedAvusdAmount} AVUSD
@@ -172,5 +172,5 @@ setInterval(() => {
   .catch((error) => {
     console.error('WebSocket connection error:', error);
   });
-}, 300000);
+}, 1800000); 
 
