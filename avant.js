@@ -1,8 +1,9 @@
 const { ethers } = require('ethers'); 
 const axios = require('axios'); 
 const dotenv = require('dotenv'); 
-dotenv.config(); 
+const Redis = require('ioredis');
 
+dotenv.config(); 
 
 const mintContractABI = [
   {
@@ -50,6 +51,22 @@ const mintContractABI = [
   }
 ];
 
+const totalSupplyABI = [
+  {
+    "inputs": [],
+    "name": "totalSupply",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  }
+];
+
 
 const depositContractABI = [
 
@@ -83,11 +100,25 @@ const depositContractABI = [
     ],
     "name": "Deposit",
     "type": "event"
+  },
+  {
+    "inputs": [],
+    "name": "totalSupply",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
   }
 ];
 
 const mintContractAddress = process.env.MINT_CONTRACT_ADDRESS;
 const depositContractAddress = process.env.DEPOSIT_CONTRACT_ADDRESS;
+const SupplyContractAddress = process.env.SUPPLY_CONTRACT_ADDRESS;
 
 const AVALANCHE_WS_URL = process.env.AVALANCHE_WS_URL;
 const provider = new ethers.WebSocketProvider(AVALANCHE_WS_URL);
@@ -96,6 +127,7 @@ const discordWebhookUrl = process.env.DISCORD_WEBHOOK_URL;
 
 const mintContract = new ethers.Contract(mintContractAddress, mintContractABI, provider);
 const depositContract = new ethers.Contract(depositContractAddress, depositContractABI, provider);
+const SupplyContract = new ethers.Contract(SupplyContractAddress, totalSupplyABI, provider);  
 
 async function sendToWebhook(message) {
   try {
@@ -107,30 +139,37 @@ async function sendToWebhook(message) {
 }
 
 
-// sendToWebhook("**🚨Avant Event Bot is active**");
+function formatNumber(value, decimals = 2) {
+  return Number(value).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
 
 mintContract.on('Mint', async (minter, benefactor, beneficiary, collateralAsset, collateralAmount, avusdAmount) => {
   console.log('Mint Event Detected:');
   console.log('Raw Parameters:', { minter, benefactor, beneficiary, collateralAsset, collateralAmount, avusdAmount });
-
+  
+  
   try {
-    
-const formattedCollateralAmount = (Number(collateralAmount) / 10 ** 6).toFixed(2); 
-const formattedAvusdAmount = (Number(avusdAmount) / 10 ** 18).toFixed(2); 
+      const formattedAvusdAmount = formatNumber(Number(avusdAmount) / 10 ** 18); 
 
-const truncatedBeneficiary = `${beneficiary.slice(0, 5)}#####`; 
-    
-    const mintMessage = `
-    **🚨New Mint Alert!🚨**
-    **Minter**: ${truncatedBeneficiary}
-    **Collateral Asset**: ${formattedCollateralAmount} USDC
-    **AvUSD Minted**: ${formattedAvusdAmount} AVUSD
-    `.trim();
+const currentTotalSupply = await SupplyContract.totalSupply();
+console.log('Raw currentTotalSupply:', currentTotalSupply.toString()); 
 
-      
-    console.log('Sending message to Discord:', mintMessage);
+const formattedTotalSupply = formatNumber(Number(currentTotalSupply) / 10 ** 18); 
+
+const truncatedBeneficiary = `${beneficiary.slice(0, 6)}...${beneficiary.slice(-4)}`;
+
+const mintMessage = `
+**🔔 New MINT Order 📈** 
+
+> • Amount: ${formattedAvusdAmount} avUSD
+> • Placed by: ${truncatedBeneficiary}
+> • New supply: ${formattedTotalSupply} avUSD 
+\`\`\`
+\`\`\`
+`.trim();
 
 
+console.log('Sending message to Discord:', mintMessage);
 await sendToWebhook(mintMessage);
 } catch (error) {
   console.error('Error handling Mint event:', error);
@@ -142,18 +181,33 @@ depositContract.on('Deposit', async (sender, owner, assets, shares) => {
   console.log('Raw Parameters:', { sender, owner, assets, shares });
 
   try {
-   
-  const formattedAssets = (Number(assets) / 10 ** 18).toFixed(2); 
-  const formattedShares =  (Number(shares) / 10 ** 18).toFixed(2); 
+  
+  const formattedAssets = formatNumber(Number(assets) / 10 ** 18); 
 
- const truncatedOwner = `${owner.slice(0, 5)}#####`; 
+const stakedTotalSupply = await depositContract.totalSupply();
+console.log('Raw currentTotalSupply:', stakedTotalSupply.toString()); 
 
-     const depositMessage = `
-     **🚨New Stake Alert!🚨**
-     **Staker**: ${truncatedOwner}
-     **Assets Deposited**: ${formattedAssets} avUSD
-     **savUSD Minted**: ${formattedShares} savUSD
-     `.trim();
+const totalMintSupply = await SupplyContract.totalSupply();
+console.log('Raw currentTotalSupply:', totalMintSupply.toString()); 
+
+const normalizedStakedTotalSupply = Number(stakedTotalSupply) / 10 ** 18;
+const normalizedTotalMintSupply = Number(totalMintSupply) / 10 ** 18;
+
+  const percentage = ((normalizedStakedTotalSupply / normalizedTotalMintSupply) * 100).toFixed(2);
+
+  const formattedstakedTotalSupply = formatNumber(normalizedStakedTotalSupply);
+
+  const truncatedOwner = `${owner.slice(0, 6)}...${owner.slice(-4)}`;
+
+const depositMessage = `
+**📥 New STAKE Event! 📈**
+
+> • Amount: ${formattedAssets} avUSD
+> • Placed by: ${truncatedOwner}
+> • Staked: ${formattedstakedTotalSupply} avUSD ${percentage}%)
+\`\`\`
+\`\`\`
+`.trim();
 
      
      console.log('Sending message to Discord:', depositMessage);
