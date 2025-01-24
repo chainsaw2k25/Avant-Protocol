@@ -237,5 +237,5 @@ setInterval(() => {
   .catch((error) => {
     console.error('WebSocket connection error:', error);
   });
-}, 1800000); 
+}, 60000); 
 
