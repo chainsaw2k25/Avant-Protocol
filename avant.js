@@ -163,7 +163,7 @@ const formattedTotalSupply = formatNumber(Number(currentTotalSupply) / 10 ** 18)
 const truncatedBeneficiary = `${beneficiary.slice(0, 6)}...${beneficiary.slice(-4)}`;
 
 const mintMessage = `
-**🔔 New MINT Order 📈** 
+> **🔔 New MINT Order 📈** 
 
 > • Amount: ${formattedAvusdAmount} avUSD
 > • Placed by: ${truncatedBeneficiary}
@@ -204,7 +204,7 @@ const normalizedTotalMintSupply = Number(totalMintSupply) / 10 ** 18;
   const truncatedOwner = `${owner.slice(0, 6)}...${owner.slice(-4)}`;
 
 const depositMessage = `
-**📥 New STAKE Event! 📈**
+> **📥 New STAKE Event! 📈**
 
 > • Amount: ${formattedAssets} avUSD
 > • Placed by: ${truncatedOwner}
