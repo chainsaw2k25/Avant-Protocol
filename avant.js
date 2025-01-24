@@ -168,9 +168,8 @@ const mintMessage = `
 > • Amount: ${formattedAvusdAmount} avUSD
 > • Placed by: ${truncatedBeneficiary}
 > • New supply: ${formattedTotalSupply} avUSD 
-\`\`\`
-\`\`\`
-`.trim();
+> 
+`;
 
 
 console.log('Sending message to Discord:', mintMessage);
@@ -209,9 +208,8 @@ const depositMessage = `
 > • Amount: ${formattedAssets} avUSD
 > • Placed by: ${truncatedOwner}
 > • Staked: ${formattedstakedTotalSupply} avUSD (${percentage}%)
-\`\`\`
-\`\`\`
-`.trim();
+> 
+`;
 
      
      console.log('Sending message to Discord:', depositMessage);
