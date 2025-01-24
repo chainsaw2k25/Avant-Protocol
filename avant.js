@@ -164,7 +164,7 @@ const truncatedBeneficiary = `${beneficiary.slice(0, 6)}...${beneficiary.slice(-
 
 const mintMessage = `
 > **🔔 New MINT Order 📈** 
-
+> 
 > • Amount: ${formattedAvusdAmount} avUSD
 > • Placed by: ${truncatedBeneficiary}
 > • New supply: ${formattedTotalSupply} avUSD 
@@ -205,7 +205,7 @@ const normalizedTotalMintSupply = Number(totalMintSupply) / 10 ** 18;
 
 const depositMessage = `
 > **📥 New STAKE Event! 📈**
-
+> 
 > • Amount: ${formattedAssets} avUSD
 > • Placed by: ${truncatedOwner}
 > • Staked: ${formattedstakedTotalSupply} avUSD (${percentage}%)
