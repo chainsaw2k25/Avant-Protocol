@@ -168,7 +168,7 @@ const mintMessage = `
 > • Amount: ${formattedAvusdAmount} avUSD
 > • Placed by: ${truncatedBeneficiary}
 > • New supply: ${formattedTotalSupply} avUSD 
-> 
+> \u200B
 `;
 
 
@@ -208,7 +208,7 @@ const depositMessage = `
 > • Amount: ${formattedAssets} avUSD
 > • Placed by: ${truncatedOwner}
 > • Staked: ${formattedstakedTotalSupply} avUSD (${percentage}%)
-> 
+> \u200B
 `;
 
      
