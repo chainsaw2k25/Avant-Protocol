@@ -1,7 +1,7 @@
 const { ethers } = require('ethers'); 
 const axios = require('axios'); 
 const dotenv = require('dotenv'); 
-const Redis = require('ioredis');
+const express = require('express');
 
 dotenv.config(); 
 
@@ -129,6 +129,10 @@ const mintContract = new ethers.Contract(mintContractAddress, mintContractABI, p
 const depositContract = new ethers.Contract(depositContractAddress, depositContractABI, provider);
 const SupplyContract = new ethers.Contract(SupplyContractAddress, totalSupplyABI, provider);  
 
+const app = express();
+const port = process.env.PORT || 10000; 
+
+
 async function sendToWebhook(message) {
   try {
     await axios.post(discordWebhookUrl, { content: message });
@@ -217,6 +221,15 @@ const depositMessage = `
         console.error('Error handling Deposit event:', error);
       }
     });
+
+app.get('/', (req, res) => {
+res.send('Web3 event bot is running');
+    }); 
+
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});
+
 
 setInterval(() => {
   provider.getBlockNumber()
