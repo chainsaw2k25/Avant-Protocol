@@ -208,7 +208,7 @@ const depositMessage = `
 
 > • Amount: ${formattedAssets} avUSD
 > • Placed by: ${truncatedOwner}
-> • Staked: ${formattedstakedTotalSupply} avUSD ${percentage}%)
+> • Staked: ${formattedstakedTotalSupply} avUSD (${percentage}%)
 \`\`\`
 \`\`\`
 `.trim();
