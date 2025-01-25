@@ -121,7 +121,7 @@ const depositContractAddress = process.env.DEPOSIT_CONTRACT_ADDRESS;
 const SupplyContractAddress = process.env.SUPPLY_CONTRACT_ADDRESS;
 
 const AVALANCHE_WS_URL = process.env.AVALANCHE_WS_URL;
-const provider = new ethers.WebSocketProvider(AVALANCHE_WS_URL);
+let provider = new ethers.WebSocketProvider(AVALANCHE_WS_URL);
 
 const discordWebhookUrl = process.env.DISCORD_WEBHOOK_URL; 
 
@@ -142,27 +142,30 @@ async function sendToWebhook(message) {
   }
 }
 
-
 function formatNumber(value, decimals = 2) {
   return Number(value).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
-mintContract.on('Mint', async (minter, benefactor, beneficiary, collateralAsset, collateralAmount, avusdAmount) => {
-  console.log('Mint Event Detected:');
-  console.log('Raw Parameters:', { minter, benefactor, beneficiary, collateralAsset, collateralAmount, avusdAmount });
-  
-  
-  try {
-      const formattedAvusdAmount = formatNumber(Number(avusdAmount) / 10 ** 18); 
+const eventQueue = [];
+let processingQueue = false;
 
-const currentTotalSupply = await SupplyContract.totalSupply();
-console.log('Raw currentTotalSupply:', currentTotalSupply.toString()); 
+async function processEventQueue() {
+  if (processingQueue || eventQueue.length === 0) return;
+  processingQueue = true;
 
-const formattedTotalSupply = formatNumber(Number(currentTotalSupply) / 10 ** 18); 
+  while (eventQueue.length > 0) {
+    const { eventType, args } = eventQueue.shift();
+    try {
+      if (eventType === 'Mint') {
+        const { minter, benefactor, beneficiary, collateralAsset, collateralAmount, avusdAmount } = args;
+        const formattedAvusdAmount = formatNumber(Number(avusdAmount) / 10 ** 18);
 
-const truncatedBeneficiary = `${beneficiary.slice(0, 6)}...${beneficiary.slice(-4)}`;
+        const currentTotalSupply = await SupplyContract.totalSupply();
+        const formattedTotalSupply = formatNumber(Number(currentTotalSupply) / 10 ** 18);
 
-const mintMessage = `
+        const truncatedBeneficiary = `${beneficiary.slice(0, 6)}...${beneficiary.slice(-4)}`;
+
+        const mintMessage = `
 > **🔔 New MINT Order 📈** 
 > 
 > • Amount: ${formattedAvusdAmount} avUSD
@@ -171,38 +174,24 @@ const mintMessage = `
 > \u200B
 `;
 
+        console.log('Sending message to Discord:', mintMessage);
+        await sendToWebhook(mintMessage);
+      } else if (eventType === 'Deposit') {
+        const { sender, owner, assets, shares } = args;
+        const formattedAssets = formatNumber(Number(assets) / 10 ** 18);
 
-console.log('Sending message to Discord:', mintMessage);
-await sendToWebhook(mintMessage);
-} catch (error) {
-  console.error('Error handling Mint event:', error);
-}
-});
+        const stakedTotalSupply = await depositContract.totalSupply();
+        const totalMintSupply = await SupplyContract.totalSupply();
 
-depositContract.on('Deposit', async (sender, owner, assets, shares) => {
-  console.log('Deposit Event Detected:');
-  console.log('Raw Parameters:', { sender, owner, assets, shares });
+        const normalizedStakedTotalSupply = Number(stakedTotalSupply) / 10 ** 18;
+        const normalizedTotalMintSupply = Number(totalMintSupply) / 10 ** 18;
 
-  try {
-  
-  const formattedAssets = formatNumber(Number(assets) / 10 ** 18); 
+        const percentage = ((normalizedStakedTotalSupply / normalizedTotalMintSupply) * 100).toFixed(2);
+        const formattedstakedTotalSupply = formatNumber(normalizedStakedTotalSupply);
 
-const stakedTotalSupply = await depositContract.totalSupply();
-console.log('Raw currentTotalSupply:', stakedTotalSupply.toString()); 
+        const truncatedOwner = `${owner.slice(0, 6)}...${owner.slice(-4)}`;
 
-const totalMintSupply = await SupplyContract.totalSupply();
-console.log('Raw currentTotalSupply:', totalMintSupply.toString()); 
-
-const normalizedStakedTotalSupply = Number(stakedTotalSupply) / 10 ** 18;
-const normalizedTotalMintSupply = Number(totalMintSupply) / 10 ** 18;
-
-  const percentage = ((normalizedStakedTotalSupply / normalizedTotalMintSupply) * 100).toFixed(2);
-
-  const formattedstakedTotalSupply = formatNumber(normalizedStakedTotalSupply);
-
-  const truncatedOwner = `${owner.slice(0, 6)}...${owner.slice(-4)}`;
-
-const depositMessage = `
+        const depositMessage = `
 > **📥 New STAKE Event! 📈**
 > 
 > • Amount: ${formattedAssets} avUSD
@@ -211,31 +200,74 @@ const depositMessage = `
 > \u200B
 `;
 
-     
-     console.log('Sending message to Discord:', depositMessage);
-
-       await sendToWebhook(depositMessage);
-      } catch (error) {
-        console.error('Error handling Deposit event:', error);
+        console.log('Sending message to Discord:', depositMessage);
+        await sendToWebhook(depositMessage);
       }
-    });
+    } catch (error) {
+      console.error('Error processing event:', error);
+    }
+  }
+
+  processingQueue = false;
+}
+
+mintContract.on('Mint', (minter, benefactor, beneficiary, collateralAsset, collateralAmount, avusdAmount) => {
+  console.log('Mint Event Detected:');
+  console.log('Raw Parameters:', { minter, benefactor, beneficiary, collateralAsset, collateralAmount, avusdAmount });
+  eventQueue.push({ eventType: 'Mint', args: { minter, benefactor, beneficiary, collateralAsset, collateralAmount, avusdAmount } });
+  processEventQueue();
+});
+
+depositContract.on('Deposit', (sender, owner, assets, shares) => {
+  console.log('Deposit Event Detected:');
+  console.log('Raw Parameters:', { sender, owner, assets, shares });
+  eventQueue.push({ eventType: 'Deposit', args: { sender, owner, assets, shares } });
+  processEventQueue();
+});
 
 app.get('/', (req, res) => {
-res.send('Web3 event bot is running');
-    }); 
+  res.send('Web3 event bot is running');
+});
 
 app.listen(port, '0.0.0.0', () => {
   console.log(`Server running on port ${port}`);
 });
 
+function monitorWebSocket() {
+  provider.on('error', (error) => {
+    console.error('WebSocket connection closed. Attempting to reconnect...', error);
+    reconnectWebSocket();
+  });
+
+  provider.on('network', (network, oldNetwork) => {
+    if (oldNetwork) {
+      console.error('Network changed:', network, oldNetwork);
+      reconnectWebSocket();
+    }
+  });
+}
+
+function reconnectWebSocket() {
+  setTimeout(() => {
+    console.log('Reconnecting WebSocket...');
+    provider = new ethers.WebSocketProvider(AVALANCHE_WS_URL);
+
+    // Reconnect contracts to the new provider
+    mintContract.connect(provider);
+    depositContract.connect(provider);
+    SupplyContract.connect(provider);
+
+    // Start monitoring the new WebSocket connection
+    monitorWebSocket();
+  }, 1000); // Reconnection delay of 1 second
+}
 
 setInterval(() => {
   provider.getBlockNumber()
-  .then((blockNumber) => {
-    console.log(`WebSocket connection is active. Current block: ${blockNumber}`);
-  })
-  .catch((error) => {
-    console.error('WebSocket connection error:', error);
-  });
-}, 120000);
-
+    .then((blockNumber) => {
+      console.log(`WebSocket connection is active. Current block: ${blockNumber}`);
+    })
+    .catch((error) => {
+      console.error('WebSocket connection error:', error);
+    });
+}, 60000);
