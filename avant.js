@@ -135,10 +135,15 @@ const port = process.env.PORT || 10000;
 
 async function sendToWebhook(message) {
   try {
-    await axios.post(discordWebhookUrl, { content: message });
+    console.log('Sending message:', JSON.stringify(message, null, 2)); // Log message payload for debugging
+    await axios.post(discordWebhookUrl, message);
     console.log('Event details sent to Discord successfully!');
   } catch (error) {
-    console.error('Error sending message to Discord:', error);
+    if (error.response) {
+      console.error('Error sending message to Discord:', error.response.data); // More detailed error info from Discord
+    } else {
+      console.error('Error sending message to Discord:', error);
+    }
   }
 }
 
@@ -165,16 +170,21 @@ async function processEventQueue() {
 
         const truncatedBeneficiary = `${beneficiary.slice(0, 6)}...${beneficiary.slice(-4)}`;
 
-        const mintMessage = `
-> **🔔 New MINT Order 📈** 
-> 
-> • Amount: ${formattedAvusdAmount} avUSD
-> • Placed by: ${truncatedBeneficiary}
-> • New supply: ${formattedTotalSupply} avUSD 
-> \u200B
-`;
+        const mintMessage = {
+          embeds: [
+            {
+              description: `
+**🔔 New MINT Order 📈** 
 
-        console.log('Sending message to Discord:', mintMessage);
+Amount: ${formattedAvusdAmount} avUSD
+Placed by: ${truncatedBeneficiary}
+New supply: ${formattedTotalSupply} avUSD 
+`,
+color: 3447003 // Blue color for the vertical line
+}
+]
+};
+        console.log('Sending message to Discord:', JSON.stringify(mintMessage, null, 2));
         await sendToWebhook(mintMessage);
       } else if (eventType === 'Deposit') {
         const { sender, owner, assets, shares } = args;
@@ -191,16 +201,21 @@ async function processEventQueue() {
 
         const truncatedOwner = `${owner.slice(0, 6)}...${owner.slice(-4)}`;
 
-        const depositMessage = `
-> **📥 New STAKE Event! 📈**
-> 
-> • Amount: ${formattedAssets} avUSD
-> • Placed by: ${truncatedOwner}
-> • Staked: ${formattedstakedTotalSupply} avUSD (${percentage}%)
-> \u200B
-`;
+        const depositMessage = {
+          embeds: [
+            {
+              description: `
+**📥 New STAKE Event! 📈**
 
-        console.log('Sending message to Discord:', depositMessage);
+Amount: ${formattedAssets} avUSD
+Placed by: ${truncatedOwner}
+Staked: ${formattedstakedTotalSupply} avUSD (${percentage}%)
+`,
+color: 3447003 // Blue color for the vertical line
+            }
+          ]
+        };
+        console.log('Sending message to Discord:', JSON.stringify(depositMessage, null, 2));
         await sendToWebhook(depositMessage);
       }
     } catch (error) {
