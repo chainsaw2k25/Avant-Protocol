@@ -135,12 +135,11 @@ const port = process.env.PORT || 10000;
 
 async function sendToWebhook(message) {
   try {
-    console.log('Sending message:', JSON.stringify(message, null, 2)); // Log message payload for debugging
     await axios.post(discordWebhookUrl, message);
     console.log('Event details sent to Discord successfully!');
   } catch (error) {
     if (error.response) {
-      console.error('Error sending message to Discord:', error.response.data); // More detailed error info from Discord
+      console.error('Error sending message to Discord:', error.response.data); 
     } else {
       console.error('Error sending message to Discord:', error);
     }
@@ -180,7 +179,7 @@ Amount: ${formattedAvusdAmount} avUSD
 Placed by: ${truncatedBeneficiary}
 New supply: ${formattedTotalSupply} avUSD 
 `,
-color: 3447003 // Blue color for the vertical line
+color: 3066993 
 }
 ]
 };
@@ -211,7 +210,7 @@ Amount: ${formattedAssets} avUSD
 Placed by: ${truncatedOwner}
 Staked: ${formattedstakedTotalSupply} avUSD (${percentage}%)
 `,
-color: 3447003 // Blue color for the vertical line
+color: 3447003 
             }
           ]
         };
@@ -267,14 +266,12 @@ function reconnectWebSocket() {
     console.log('Reconnecting WebSocket...');
     provider = new ethers.WebSocketProvider(AVALANCHE_WS_URL);
 
-    // Reconnect contracts to the new provider
     mintContract.connect(provider);
     depositContract.connect(provider);
     SupplyContract.connect(provider);
 
-    // Start monitoring the new WebSocket connection
     monitorWebSocket();
-  }, 1000); // Reconnection delay of 1 second
+  }, 1000); 
 }
 
 setInterval(() => {
