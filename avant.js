@@ -358,16 +358,12 @@ Staked: ${formattedStaked} avBTC (${percentage}%)
 }
 
 else if (eventType === 'Boost') {
-    const { provider: providerAddress, depositToken, amount } = args;
+    const { provider, amount } = args;
 
-    const tokenContract = new ethers.Contract(depositToken, erc20ABI, provider);
-    const decimals = await tokenContract.decimals();
-    const formattedAmount = ethers.utils.formatUnits(amount, decimals);
-
-    const truncatedProvider = `${providerAddress.slice(0, 6)}...${providerAddress.slice(-4)}`;
-
+    const formattedAmount = formatNumber(Number(amount) / 10 ** 18);
+    const truncatedProvider = `${provider.slice(0, 6)}...${provider.slice(-4)}`;
     const totalSupply = await avusdxContract.totalSupply();
-    const formattedTotalSupply = formatNumber(Number(ethers.utils.formatUnits(totalSupply, 18)));
+    const formattedTotalSupply = formatNumber(Number(totalSupply) / 10 ** 18);
 
     const boostMessage = {
         embeds: [
@@ -423,7 +419,12 @@ savbtcDepositContract.on('Deposit', (sender, owner, assets, shares) => {
 
 avusdxRequestManager.on('MintRequestCreated', (id, provider, depositToken, amount, minMintAmount) => {
   console.log('avUSDx MintRequestCreated Event Detected:', { id, provider, depositToken, amount, minMintAmount });
-  eventQueue.push({ eventType: 'Boost', args: { provider, amount } });
+  eventQueue.push({ 
+    eventType: 'Boost', 
+    args: { 
+      provider, amount 
+    } 
+  });
   processEventQueue();
 });
 
