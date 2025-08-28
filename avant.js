@@ -358,23 +358,34 @@ Staked: ${formattedStaked} avBTC (${percentage}%)
 }
 
 else if (eventType === 'Boost') {
-        const { provider, amount } = args;
-        const formattedAmount = formatNumber(ethers.utils.formatUnits(amount, 18));
-        const truncatedProvider = `${provider.slice(0,6)}...${provider.slice(-4)}`;
-        const totalSupply = await avusdxContract.totalSupply();
-        const formattedTotalSupply = formatNumber(ethers.utils.formatUnits(totalSupply, 18));
+    const { provider: providerAddress, depositToken, amount } = args;
 
-        const boostMessage = { embeds: [{ description: `
+    const tokenContract = new ethers.Contract(depositToken, erc20ABI, provider);
+    const decimals = await tokenContract.decimals();
+    const formattedAmount = ethers.utils.formatUnits(amount, decimals);
 
+    const truncatedProvider = `${providerAddress.slice(0, 6)}...${providerAddress.slice(-4)}`;
+
+    const totalSupply = await avusdxContract.totalSupply();
+    const formattedTotalSupply = formatNumber(Number(ethers.utils.formatUnits(totalSupply, 18)));
+
+    const boostMessage = {
+        embeds: [
+            {
+                description: `
 **🔔 New Boost Order 📈**
 
 Amount: ${formattedAmount} avUSD
 Placed by: ${truncatedProvider}
 New supply: ${formattedTotalSupply} avUSDx
-`, color: 0xFF69B4 }] };
+`,
+                color: 0xFF69B4
+            }
+        ]
+    };
 
-        await sendToWebhook(boostMessage);
-      }
+    await sendToWebhook(boostMessage);
+}
 
 
     } catch (error) {
