@@ -5,52 +5,23 @@ const express = require('express');
 
 dotenv.config(); 
 
+// --- ABIs ---
+
 const mintContractABI = [
   {
     "anonymous": false,
     "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "minter",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "benefactor",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "beneficiary",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "collateral_asset",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "collateral_amount",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "avantcoin_amount",
-        "type": "uint256"
-      }
+      { "indexed": true, "internalType": "address", "name": "minter", "type": "address" },
+      { "indexed": true, "internalType": "address", "name": "benefactor", "type": "address" },
+      { "indexed": true, "internalType": "address", "name": "beneficiary", "type": "address" },
+      { "indexed": false, "internalType": "address", "name": "collateral_asset", "type": "address" },
+      { "indexed": false, "internalType": "uint256", "name": "collateral_amount", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "avantcoin_amount", "type": "uint256" }
     ],
     "name": "Mint",
     "type": "event"
   }
 ];
-
 
 const avbtcMintABI = [
   {
@@ -68,8 +39,8 @@ const avbtcMintABI = [
   }
 ];
 
-
 const savbtcDepositABI = [
+  // Deposit event (for listening)
   {
     "anonymous": false,
     "inputs": [
@@ -80,92 +51,55 @@ const savbtcDepositABI = [
     ],
     "name": "Deposit",
     "type": "event"
-  }
-];
-
-const totalSupplyABI = [
-  {
-    "inputs": [],
-    "name": "totalSupply",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  }
-];
-
-
-const depositContractABI = [
-
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "sender",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "owner",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "assets",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "shares",
-        "type": "uint256"
-      }
-    ],
-    "name": "Deposit",
-    "type": "event"
   },
-  {
-    "inputs": [],
-    "name": "totalSupply",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  }
-];
-
-const supplyAbi = [
+  // Minimal ERC20 surface we need from the share token
   {
     "inputs": [],
     "name": "totalSupply",
     "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
     "stateMutability": "view",
     "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "decimals",
+    "outputs": [{ "internalType": "uint8", "name": "", "type": "uint8" }],
+    "stateMutability": "view",
+    "type": "function"
   }
+];
+
+// Generic minimal ERC20 (totalSupply + decimals)
+const erc20ABI = [
+  { "inputs": [], "name": "totalSupply", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" },
+  { "inputs": [], "name": "decimals",    "outputs": [{ "internalType": "uint8",   "name": "", "type": "uint8"    }], "stateMutability": "view", "type": "function" },
+];
+
+// For deposit contracts you also query for totalSupply/decimals (share token) + the Deposit event
+const depositContractABI = [
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "address", "name": "sender", "type": "address" },
+      { "indexed": true, "internalType": "address", "name": "owner", "type": "address" },
+      { "indexed": false, "internalType": "uint256", "name": "assets", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "shares", "type": "uint256" }
+    ],
+    "name": "Deposit",
+    "type": "event"
+  },
+  { "inputs": [], "name": "totalSupply", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" },
+  { "inputs": [], "name": "decimals",    "outputs": [{ "internalType": "uint8",   "name": "", "type": "uint8"    }], "stateMutability": "view", "type": "function" },
 ];
 
 const requestManagerABI = [
   {
     anonymous: false,
     inputs: [
-      { indexed: true, internalType: "uint256", name: "id", type: "uint256" },
-      { indexed: true, internalType: "address", name: "provider", type: "address" },
-      { indexed: false, internalType: "address", name: "depositToken", type: "address" },
-      { indexed: false, internalType: "uint256", name: "amount", type: "uint256" },
+      { indexed: true,  internalType: "uint256", name: "id",            type: "uint256" },
+      { indexed: true,  internalType: "address", name: "provider",      type: "address" },
+      { indexed: false, internalType: "address", name: "depositToken",  type: "address" },
+      { indexed: false, internalType: "uint256", name: "amount",        type: "uint256" },
       { indexed: false, internalType: "uint256", name: "minMintAmount", type: "uint256" },
     ],
     name: "MintRequestCreated",
@@ -173,62 +107,61 @@ const requestManagerABI = [
   },
 ];
 
-const erc20ABI = [
-  {
-    inputs: [], name: "totalSupply", outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "view", type: "function",
-  },
-];
+const avbtcxRequestManagerABI = requestManagerABI; // identical event
 
-const avbtcxRequestManagerABI = [
-  {
-    anonymous: false,
-    inputs: [
-      { indexed: true, internalType: "uint256", name: "id", type: "uint256" },
-      { indexed: true, internalType: "address", name: "provider", type: "address" },
-      { indexed: false, internalType: "address", name: "depositToken", type: "address" },
-      { indexed: false, internalType: "uint256", name: "amount", type: "uint256" },
-      { indexed: false, internalType: "uint256", name: "minMintAmount", type: "uint256" },
-    ],
-    name: "MintRequestCreated",
-    type: "event",
-  }
-];
+// --- Addresses from env ---
 
-
-
-const mintContractAddress = process.env.MINT_CONTRACT_ADDRESS;
-const depositContractAddress = process.env.DEPOSIT_CONTRACT_ADDRESS;
-const SupplyContractAddress = process.env.SUPPLY_CONTRACT_ADDRESS;
-const avbtcMintAddress = process.env.AVBTC_MINT_CONTRACT;
-const savbtcDepositAddress = process.env.SAVBTC_DEPOSIT_CONTRACT;
-const avbtcSupply = process.env.AVBTC_SUPPLY_CONTRACT;
-const avusdxRequestManagerAddress = process.env.AVUSDX_REQUEST_MANAGER;
-const avusdxAddress = process.env.AVUSDX_CONTRACT;
-const avbtcxRequestManagerAddress = process.env.AVBTCX_REQUEST_MANAGER;
-const avbtcxAddress = process.env.AVBTCX_CONTRACT;
-
+const mintContractAddress            = process.env.MINT_CONTRACT_ADDRESS;
+const depositContractAddress         = process.env.DEPOSIT_CONTRACT_ADDRESS;      // savUSD / avUSDx deposit
+const SupplyContractAddress          = process.env.SUPPLY_CONTRACT_ADDRESS;       // avUSD token
+const avbtcMintAddress               = process.env.AVBTC_MINT_CONTRACT;           // avBTC minter
+const savbtcDepositAddress           = process.env.SAVBTC_DEPOSIT_CONTRACT;       // savBTC (ERC4626 shares)
+const avbtcSupply                    = process.env.AVBTC_SUPPLY_CONTRACT;         // avBTC token
+const avusdxRequestManagerAddress    = process.env.AVUSDX_REQUEST_MANAGER;        // avUSDx request manager
+const avusdxAddress                  = process.env.AVUSDX_CONTRACT;               // avUSDx token
+const avbtcxRequestManagerAddress    = process.env.AVBTCX_REQUEST_MANAGER;        // avBTCx request manager
+const avbtcxAddress                  = process.env.AVBTCX_CONTRACT;               // avBTCx token
 
 const AVALANCHE_WS_URL = process.env.AVALANCHE_WS_URL;
-let provider = new ethers.WebSocketProvider(AVALANCHE_WS_URL);
-
 const discordWebhookUrl = process.env.DISCORD_WEBHOOK_URL; 
 
-const mintContract = new ethers.Contract(mintContractAddress, mintContractABI, provider);
-const depositContract = new ethers.Contract(depositContractAddress, depositContractABI, provider);
-const SupplyContract = new ethers.Contract(SupplyContractAddress, totalSupplyABI, provider);  
-const avbtcMintContract = new ethers.Contract(avbtcMintAddress, avbtcMintABI, provider);
-const savbtcDepositContract = new ethers.Contract(savbtcDepositAddress, savbtcDepositABI, provider);
-const avbtcSupplyContract = new ethers.Contract(avbtcSupply, supplyAbi, provider);
-const avusdxRequestManager = new ethers.Contract(avusdxRequestManagerAddress, requestManagerABI, provider);
-const avusdxContract = new ethers.Contract(avusdxAddress, erc20ABI, provider);
-const avbtcxRequestManager = new ethers.Contract(avbtcxRequestManagerAddress, avbtcxRequestManagerABI, provider);
-const avbtcxContract = new ethers.Contract(avbtcxAddress, erc20ABI, provider);
+// --- Provider & Contracts (reassigned on reconnect) ---
 
+let provider = new ethers.WebSocketProvider(AVALANCHE_WS_URL);
+
+let mintContract;
+let depositContract;
+let SupplyContract;
+let avbtcMintContract;
+let savbtcDepositContract;
+let avbtcSupplyContract;
+let avusdxRequestManager;
+let avusdxContract;
+let avbtcxRequestManager;
+let avbtcxContract;
+
+// Create all contracts (and allow re-creation on reconnect)
+function createContracts() {
+  mintContract            = new ethers.Contract(mintContractAddress,         mintContractABI,            provider);
+  depositContract         = new ethers.Contract(depositContractAddress,      depositContractABI,         provider);
+  SupplyContract          = new ethers.Contract(SupplyContractAddress,       erc20ABI,                   provider); // avUSD ERC20
+  avbtcMintContract       = new ethers.Contract(avbtcMintAddress,            avbtcMintABI,               provider);
+  savbtcDepositContract   = new ethers.Contract(savbtcDepositAddress,        savbtcDepositABI,           provider);
+  avbtcSupplyContract     = new ethers.Contract(avbtcSupply,                 erc20ABI,                   provider); // avBTC ERC20
+  avusdxRequestManager    = new ethers.Contract(avusdxRequestManagerAddress, requestManagerABI,          provider);
+  avusdxContract          = new ethers.Contract(avusdxAddress,               erc20ABI,                   provider); // avUSDx ERC20
+  avbtcxRequestManager    = new ethers.Contract(avbtcxRequestManagerAddress, avbtcxRequestManagerABI,    provider);
+  avbtcxContract          = new ethers.Contract(avbtcxAddress,               erc20ABI,                   provider); // avBTCx ERC20
+}
+
+createContracts();
+
+// --- Express ---
 
 const app = express();
 const port = process.env.PORT || 10000; 
 
+// --- Helpers ---
 
 async function sendToWebhook(message) {
   try {
@@ -247,8 +180,19 @@ function formatNumber(value, decimals = 2) {
   return Number(value).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
+async function getDecimals(contract, fallback = 18) {
+  try {
+    const d = await contract.decimals();
+    return Number(d);
+  } catch {
+    return fallback;
+  }
+}
+
 const eventQueue = [];
 let processingQueue = false;
+
+// --- Queue Processor ---
 
 async function processEventQueue() {
   if (processingQueue || eventQueue.length === 0) return;
@@ -259,10 +203,12 @@ async function processEventQueue() {
     try {
       if (eventType === 'Mint') {
         const { minter, benefactor, beneficiary, collateralAsset, collateralAmount, avantcoinAmount } = args;
-        const formattedAvantcoinAmount = formatNumber(Number(avantcoinAmount) / 10 ** 18);
+
+        const decimals = await getDecimals(SupplyContract, 18); // avUSD token decimals
+        const formattedAvantcoinAmount = formatNumber(parseFloat(ethers.formatUnits(avantcoinAmount, decimals)));
 
         const currentTotalSupply = await SupplyContract.totalSupply();
-        const formattedTotalSupply = formatNumber(Number(currentTotalSupply) / 10 ** 18);
+        const formattedTotalSupply = formatNumber(parseFloat(ethers.formatUnits(currentTotalSupply, decimals)));
 
         const truncatedBeneficiary = `${beneficiary.slice(0, 6)}...${beneficiary.slice(-4)}`;
 
@@ -276,26 +222,29 @@ Amount: ${formattedAvantcoinAmount} avUSD
 Placed by: ${truncatedBeneficiary}
 New supply: ${formattedTotalSupply} avUSD 
 `,
-color: 3066993 
-}
-]
-};
-        console.log('Sending message to Discord:', JSON.stringify(mintMessage, null, 2));
+              color: 3066993
+            }
+          ]
+        };
         await sendToWebhook(mintMessage);
-      } 
-      
+      }
+
       else if (eventType === 'Deposit') {
         const { sender, owner, assets, shares } = args;
-        const formattedAssets = formatNumber(Number(assets) / 10 ** 18);
+
+        // depositContract represents the share token (ERC4626) — use its decimals
+        const shareDecimals = await getDecimals(depositContract, 18);
+        const formattedAssets = formatNumber(parseFloat(ethers.formatUnits(assets, shareDecimals)));
 
         const stakedTotalSupply = await depositContract.totalSupply();
-        const totalMintSupply = await SupplyContract.totalSupply();
+        const totalMintSupply   = await SupplyContract.totalSupply();
 
-        const normalizedStakedTotalSupply = Number(stakedTotalSupply) / 10 ** 18;
-        const normalizedTotalMintSupply = Number(totalMintSupply) / 10 ** 18;
+        const normalizedStaked = parseFloat(ethers.formatUnits(stakedTotalSupply, shareDecimals));
+        const baseDecimals = await getDecimals(SupplyContract, 18);
+        const normalizedTotal  = parseFloat(ethers.formatUnits(totalMintSupply, baseDecimals));
 
-        const percentage = ((normalizedStakedTotalSupply / normalizedTotalMintSupply) * 100).toFixed(2);
-        const formattedstakedTotalSupply = formatNumber(normalizedStakedTotalSupply);
+        const percentage = normalizedTotal > 0 ? ((normalizedStaked / normalizedTotal) * 100).toFixed(2) : "0.00";
+        const formattedStaked = formatNumber(normalizedStaked);
 
         const truncatedOwner = `${owner.slice(0, 6)}...${owner.slice(-4)}`;
 
@@ -307,23 +256,24 @@ color: 3066993
 
 Amount: ${formattedAssets} avUSD
 Placed by: ${truncatedOwner}
-Staked: ${formattedstakedTotalSupply} avUSD (${percentage}%)
+Staked: ${formattedStaked} avUSD (${percentage}%)
 `,
-color: 3447003 
+              color: 3447003
             }
           ]
         };
-        console.log('Sending message to Discord:', JSON.stringify(depositMessage, null, 2));
         await sendToWebhook(depositMessage);
       }
 
-
-else if (eventType === 'MintBTC') {
+      else if (eventType === 'MintBTC') {
         const { minter, benefactor, beneficiary, collateralAsset, collateralAmount, avantcoinAmount } = args;
-        const formattedAvbtcAmount = formatNumber(Number(avantcoinAmount) / 10 ** 18, 4);
+
+        // avBTC ERC20
+        const avbtcDecimals = await getDecimals(avbtcSupplyContract, 18);
+        const formattedAvbtcAmount = formatNumber(parseFloat(ethers.formatUnits(avantcoinAmount, avbtcDecimals)), 4);
 
         const currentTotalSupply = await avbtcSupplyContract.totalSupply();
-        const formattedTotalSupply = formatNumber(Number(currentTotalSupply) / 10 ** 18, 2);
+        const formattedTotalSupply = formatNumber(parseFloat(ethers.formatUnits(currentTotalSupply, avbtcDecimals)), 2);
 
         const truncatedBeneficiary = `${beneficiary.slice(0, 6)}...${beneficiary.slice(-4)}`;
 
@@ -337,145 +287,167 @@ Amount: ${formattedAvbtcAmount} avBTC
 Placed by: ${truncatedBeneficiary}  
 New supply: ${formattedTotalSupply} avBTC
         `,
-        color: 3066993
+              color: 3066993
+            }
+          ]
+        };
+        await sendToWebhook(mintBTCMessage);
       }
-    ]
-  };
-  await sendToWebhook(mintBTCMessage);
 
-      } else if (eventType === 'DepositBTC') {
+      else if (eventType === 'DepositBTC') {
         const { sender, owner, assets, shares } = args;
-       
-        const formattedAssets = formatNumber(Number(assets) / 10 ** 18, 4);
 
-  const stakedTotalSupply = await savbtcDepositContract.totalSupply(); 
-  const totalMintSupply = await avbtcSupplyContract.totalSupply(); 
+        // savBTC (shares) decimals
+        const savbtcShareDecimals = await getDecimals(savbtcDepositContract, 18);
+        const formattedAssets = formatNumber(parseFloat(ethers.formatUnits(assets, savbtcShareDecimals)), 4);
 
-  const normalizedStaked = Number(stakedTotalSupply) / 10 ** 18;
-  const normalizedTotal = Number(totalMintSupply) / 10 ** 18;
+        const stakedTotalSupply = await savbtcDepositContract.totalSupply(); // xBTC shares supply
+        const totalMintSupply   = await avbtcSupplyContract.totalSupply();   // avBTC token total supply
 
-  const percentage = ((normalizedStaked / normalizedTotal) * 100).toFixed(2);
+        const normalizedStaked = parseFloat(ethers.formatUnits(stakedTotalSupply, savbtcShareDecimals));
+        const avbtcDecimals = await getDecimals(avbtcSupplyContract, 18);
+        const normalizedTotal = parseFloat(ethers.formatUnits(totalMintSupply, avbtcDecimals));
 
-  const formattedStaked = formatNumber(normalizedStaked, 2);
-  const truncatedOwner = `${owner.slice(0, 6)}...${owner.slice(-4)}`;
+        const percentage = normalizedTotal > 0 ? ((normalizedStaked / normalizedTotal) * 100).toFixed(2) : "0.00";
+        const formattedStaked = formatNumber(normalizedStaked, 2);
 
-  const depositBTCMessage = {
-    embeds: [
-      {
-        description: `
+        const truncatedOwner = `${owner.slice(0, 6)}...${owner.slice(-4)}`;
+
+        const depositBTCMessage = {
+          embeds: [
+            {
+              description: `
 **📥 New STAKE Event! 📈**
 
 Amount: ${formattedAssets} avBTC  
 Placed by: ${truncatedOwner}  
 Staked: ${formattedStaked} avBTC (${percentage}%)
         `,
-        color: 3447003
+              color: 3447003
+            }
+          ]
+        };
+        await sendToWebhook(depositBTCMessage);
       }
-    ]
-  };
-  await sendToWebhook(depositBTCMessage);
-}
 
-else if (eventType === 'Boost') {
-    const { provider, amount } = args;
+      else if (eventType === 'Boost') {
+        const { provider: boostProvider, amount } = args;
 
-    const formattedAmount = formatNumber(Number(amount) / 10 ** 18);
-    const truncatedProvider = `${provider.slice(0, 6)}...${provider.slice(-4)}`;
-    const totalSupply = await avusdxContract.totalSupply();
-    const formattedTotalSupply = formatNumber(Number(totalSupply) / 10 ** 18);
+        // avUSDx ERC20
+        const decimals = await getDecimals(avusdxContract, 18);
+        const formattedAmount = formatNumber(parseFloat(ethers.formatUnits(amount, decimals)));
 
-    const boostMessage = {
-        embeds: [
+        const truncatedProvider = `${boostProvider.slice(0, 6)}...${boostProvider.slice(-4)}`;
+
+        const totalSupply = await avusdxContract.totalSupply();
+        const formattedTotalSupply = formatNumber(parseFloat(ethers.formatUnits(totalSupply, decimals)));
+
+        const boostMessage = {
+          embeds: [
             {
-                description: `
+              description: `
 **🔔 New Boost Order 📈**
 
 Amount: ${formattedAmount} avUSD
 Placed by: ${truncatedProvider}
 New supply: ${formattedTotalSupply} avUSDx
 `,
-                color: 0xFF69B4
+              color: 0xFF69B4
             }
-        ]
-    };
+          ]
+        };
 
-    await sendToWebhook(boostMessage);
-}
+        await sendToWebhook(boostMessage);
+      }
 
-else if (eventType === 'avbtcxBoost') {
-    const { provider, amount } = args;
+      else if (eventType === 'avbtcxBoost') {
+        const { provider: boostProvider, amount } = args;
 
-    const formattedAmount = (Number(amount) / 10 ** 18).toFixed(4);
-    const truncatedProvider = `${provider.slice(0, 6)}...${provider.slice(-4)}`;
+        // avBTCx ERC20
+        const decimals = await getDecimals(avbtcxContract, 18);
+        const formattedAmount = formatNumber(parseFloat(ethers.formatUnits(amount, decimals)), 4);
 
-    const totalSupply = await avbtcxContract.totalSupply();
-    const formattedTotalSupply = (Number(totalSupply) / 10 ** 18).toFixed(2);
+        const truncatedProvider = `${boostProvider.slice(0, 6)}...${boostProvider.slice(-4)}`;
 
-    const boostMessage = {
-        embeds: [
+        const totalSupply = await avbtcxContract.totalSupply();
+        const formattedTotalSupply = formatNumber(parseFloat(ethers.formatUnits(totalSupply, decimals)), 2);
+
+        const boostMessage = {
+          embeds: [
             {
-                description: `
+              description: `
 **🔔 New Boost Order 📈**
 
 Amount: ${formattedAmount} avBTC  
 Placed by: ${truncatedProvider}  
 New supply: ${formattedTotalSupply} avBTCx
 `,
-                color: 0xFF69B4
+              color: 0xFF69B4
             }
-        ]
-    };
+          ]
+        };
 
-    await sendToWebhook(boostMessage);
-}
+        await sendToWebhook(boostMessage);
+      }
 
-
-    } 
-    
-    catch (error) {
+    } catch (error) {
       console.error('Error processing event:', error);
     }
   }
   processingQueue = false;
 }
 
-mintContract.on('Mint', (minter, benefactor, beneficiary, collateralAsset, collateralAmount, avantcoinAmount) => {
-  console.log('Mint Event Detected:');
-  console.log('Raw Parameters:', { minter, benefactor, beneficiary, collateralAsset, collateralAmount, avantcoinAmount });
-  eventQueue.push({ eventType: 'Mint', args: { minter, benefactor, beneficiary, collateralAsset, collateralAmount, avantcoinAmount } });
-  processEventQueue();
-});
+// --- Listeners ---
 
-depositContract.on('Deposit', (sender, owner, assets, shares) => {
-  console.log('Deposit Event Detected:');
-  console.log('Raw Parameters:', { sender, owner, assets, shares });
-  eventQueue.push({ eventType: 'Deposit', args: { sender, owner, assets, shares } });
-  processEventQueue();
-});
+function setupListeners() {
+  // Remove old listeners to avoid duplicates after reconnect
+  mintContract.removeAllListeners();
+  depositContract.removeAllListeners();
+  avbtcMintContract.removeAllListeners();
+  savbtcDepositContract.removeAllListeners();
+  avusdxRequestManager.removeAllListeners();
+  avbtcxRequestManager.removeAllListeners();
 
-avbtcMintContract.on('Mint', (minter, benefactor, beneficiary, collateralAsset, collateralAmount, avantcoinAmount) => {
-  console.log('avBTC Mint Event:', { minter, benefactor, beneficiary, collateralAsset, collateralAmount, avantcoinAmount });
-  eventQueue.push({ eventType: 'MintBTC', args: { minter, benefactor, beneficiary, collateralAsset, collateralAmount, avantcoinAmount } });
-  processEventQueue();
-});
+  mintContract.on('Mint', (minter, benefactor, beneficiary, collateralAsset, collateralAmount, avantcoinAmount) => {
+    console.log('Mint Event Detected:', { minter, benefactor, beneficiary, collateralAsset, collateralAmount, avantcoinAmount });
+    eventQueue.push({ eventType: 'Mint', args: { minter, benefactor, beneficiary, collateralAsset, collateralAmount, avantcoinAmount } });
+    processEventQueue();
+  });
 
-savbtcDepositContract.on('Deposit', (sender, owner, assets, shares) => {
-  console.log('savBTC Deposit Event:', { sender, owner, assets, shares });
-  eventQueue.push({ eventType: 'DepositBTC', args: { sender, owner, assets, shares } });
-  processEventQueue();
-});
+  depositContract.on('Deposit', (sender, owner, assets, shares) => {
+    console.log('Deposit Event Detected:', { sender, owner, assets, shares });
+    eventQueue.push({ eventType: 'Deposit', args: { sender, owner, assets, shares } });
+    processEventQueue();
+  });
 
-avusdxRequestManager.on('MintRequestCreated', (id, provider, depositToken, amount, minMintAmount) => {
-  console.log('avUSDx MintRequestCreated Event Detected:', { id, provider, depositToken, amount, minMintAmount });
-  eventQueue.push({ eventType: 'Boost', args: { provider, amount }  });
-  processEventQueue();  
-});
+  avbtcMintContract.on('Mint', (minter, benefactor, beneficiary, collateralAsset, collateralAmount, avantcoinAmount) => {
+    console.log('avBTC Mint Event:', { minter, benefactor, beneficiary, collateralAsset, collateralAmount, avantcoinAmount });
+    eventQueue.push({ eventType: 'MintBTC', args: { minter, benefactor, beneficiary, collateralAsset, collateralAmount, avantcoinAmount } });
+    processEventQueue();
+  });
 
-avbtcxRequestManager.on('MintRequestCreated', (id, provider, depositToken, amount, minMintAmount) => {
-  console.log('avBTCx MintRequestCreated Event Detected:', { id, provider, depositToken, amount, minMintAmount });
-  eventQueue.push({ eventType: 'avbtcxBoost', args: { provider, amount} });
-  processEventQueue();
-});
+  savbtcDepositContract.on('Deposit', (sender, owner, assets, shares) => {
+    console.log('savBTC Deposit Event:', { sender, owner, assets, shares });
+    eventQueue.push({ eventType: 'DepositBTC', args: { sender, owner, assets, shares } });
+    processEventQueue();
+  });
+
+  avusdxRequestManager.on('MintRequestCreated', (id, providerAddr, depositToken, amount, minMintAmount) => {
+    console.log('avUSDx MintRequestCreated Event Detected:', { id, provider: providerAddr, depositToken, amount, minMintAmount });
+    eventQueue.push({ eventType: 'Boost', args: { provider: providerAddr, amount }  });
+    processEventQueue();  
+  });
+
+  avbtcxRequestManager.on('MintRequestCreated', (id, providerAddr, depositToken, amount, minMintAmount) => {
+    console.log('avBTCx MintRequestCreated Event Detected:', { id, provider: providerAddr, depositToken, amount, minMintAmount });
+    eventQueue.push({ eventType: 'avbtcxBoost', args: { provider: providerAddr, amount } });
+    processEventQueue();
+  });
+}
+
+setupListeners();
+
+// --- Server ---
 
 app.get('/', (req, res) => {
   res.send('Web3 event bot is running');
@@ -485,15 +457,12 @@ app.listen(port, '0.0.0.0', () => {
   console.log(`Server running on port ${port}`);
 });
 
-function monitorWebSocket() {
-  provider.on('error', (error) => {
-    console.error('WebSocket connection closed. Attempting to reconnect...', error);
-    reconnectWebSocket();
-  });
+// --- WS Monitoring & Reconnect (ethers v6 safe) ---
 
-  provider.on('network', (network, oldNetwork) => {
+function monitorWebSocket() {
+  provider.on("network", (newNetwork, oldNetwork) => {
     if (oldNetwork) {
-      console.error('Network changed:', network, oldNetwork);
+      console.log(`🌐 Network changed from ${oldNetwork.name} to ${newNetwork.name}`);
       reconnectWebSocket();
     }
   });
@@ -501,30 +470,28 @@ function monitorWebSocket() {
 
 function reconnectWebSocket() {
   setTimeout(() => {
-    console.log('Reconnecting WebSocket...');
+    console.log("🔄 Reconnecting WebSocket...");
+
+    // Recreate provider
     provider = new ethers.WebSocketProvider(AVALANCHE_WS_URL);
 
-    mintContract.connect(provider);
-    depositContract.connect(provider);
-    SupplyContract.connect(provider);
-    avbtcMintContract.connect(provider);
-    savbtcDepositContract.connect(provider);
-    avbtcSupplyContract.connect(provider);
-    avusdxRequestManager.connect(provider);
-    avusdxContract.connect(provider);
-    avbtcxRequestManager.connect(provider);
-    avbtcxContract.connect(provider);
-
+    // Recreate contracts and listeners bound to the new provider
+    createContracts();
+    setupListeners();
     monitorWebSocket();
-  }, 1000); 
+  }, 1000);
 }
 
+monitorWebSocket();
+
+// Periodic health check (main way to detect drops in v6)
 setInterval(() => {
   provider.getBlockNumber()
     .then((blockNumber) => {
-      console.log(`WebSocket connection is active. Current block: ${blockNumber}`);
+      console.log(`✅ WebSocket alive. Current block: ${blockNumber}`);
     })
     .catch((error) => {
-      console.error('WebSocket connection error:', error);
+      console.error("⚠️ WebSocket check failed:", error);
+      reconnectWebSocket();
     });
-}, 300000);
+}, 300000); // every 5 mins
