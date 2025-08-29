@@ -180,6 +180,22 @@ const erc20ABI = [
   },
 ];
 
+const avbtcxRequestManagerABI = [
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: "uint256", name: "id", type: "uint256" },
+      { indexed: true, internalType: "address", name: "provider", type: "address" },
+      { indexed: false, internalType: "address", name: "depositToken", type: "address" },
+      { indexed: false, internalType: "uint256", name: "amount", type: "uint256" },
+      { indexed: false, internalType: "uint256", name: "minMintAmount", type: "uint256" },
+    ],
+    name: "MintRequestCreated",
+    type: "event",
+  }
+];
+
+
 
 const mintContractAddress = process.env.MINT_CONTRACT_ADDRESS;
 const depositContractAddress = process.env.DEPOSIT_CONTRACT_ADDRESS;
@@ -189,6 +205,8 @@ const savbtcDepositAddress = process.env.SAVBTC_DEPOSIT_CONTRACT;
 const avbtcSupply = process.env.AVBTC_SUPPLY_CONTRACT;
 const avusdxRequestManagerAddress = process.env.AVUSDX_REQUEST_MANAGER;
 const avusdxAddress = process.env.AVUSDX_CONTRACT;
+const avbtcxRequestManagerAddress = process.env.AVBTCX_REQUEST_MANAGER;
+const avbtcxAddress = process.env.AVBTCX_CONTRACT;
 
 
 const AVALANCHE_WS_URL = process.env.AVALANCHE_WS_URL;
@@ -204,6 +222,8 @@ const savbtcDepositContract = new ethers.Contract(savbtcDepositAddress, savbtcDe
 const avbtcSupplyContract = new ethers.Contract(avbtcSupply, supplyAbi, provider);
 const avusdxRequestManager = new ethers.Contract(avusdxRequestManagerAddress, requestManagerABI, provider);
 const avusdxContract = new ethers.Contract(avusdxAddress, erc20ABI, provider);
+const avbtcxRequestManager = new ethers.Contract(avbtcxRequestManagerAddress, avbtcxRequestManagerABI, provider);
+const avbtcxContract = new ethers.Contract(avbtcxAddress, erc20ABI, provider);
 
 
 const app = express();
@@ -324,7 +344,6 @@ New supply: ${formattedTotalSupply} avBTC
   await sendToWebhook(mintBTCMessage);
 
       } else if (eventType === 'DepositBTC') {
-        // savBTC Deposit
         const { sender, owner, assets, shares } = args;
        
         const formattedAssets = formatNumber(Number(assets) / 10 ** 18, 4);
@@ -383,8 +402,37 @@ New supply: ${formattedTotalSupply} avUSDx
     await sendToWebhook(boostMessage);
 }
 
+else if (eventType === 'avbtcxBoost') {
+    const { provider, amount } = args;
 
-    } catch (error) {
+    const formattedAmount = (Number(amount) / 10 ** 18).toFixed(4);
+    const truncatedProvider = `${provider.slice(0, 6)}...${provider.slice(-4)}`;
+
+    const totalSupply = await avbtcxContract.totalSupply();
+    const formattedTotalSupply = (Number(totalSupply) / 10 ** 18).toFixed(2);
+
+    const boostMessage = {
+        embeds: [
+            {
+                description: `
+**🔔 New Boost Order 📈**
+
+Amount: ${formattedAmount} avBTCx  
+Placed by: ${truncatedProvider}  
+New supply: ${formattedTotalSupply} avBTCx
+`,
+                color: 0xFF69B4
+            }
+        ]
+    };
+
+    await sendToWebhook(boostMessage);
+}
+
+
+    } 
+    
+    catch (error) {
       console.error('Error processing event:', error);
     }
   }
@@ -419,12 +467,13 @@ savbtcDepositContract.on('Deposit', (sender, owner, assets, shares) => {
 
 avusdxRequestManager.on('MintRequestCreated', (id, provider, depositToken, amount, minMintAmount) => {
   console.log('avUSDx MintRequestCreated Event Detected:', { id, provider, depositToken, amount, minMintAmount });
-  eventQueue.push({ 
-    eventType: 'Boost', 
-    args: { 
-      provider, amount 
-    } 
-  });
+  eventQueue.push({ eventType: 'Boost', args: { provider, amount }  });
+  processEventQueue();  
+});
+
+avbtcxRequestManager.on('MintRequestCreated', (id, provider, depositToken, amount, minMintAmount) => {
+  console.log('avBTCx MintRequestCreated Event Detected:', { id, provider, depositToken, amount, minMintAmount });
+  eventQueue.push({ eventType: 'avbtcxBoost', args: { provider, amount} });
   processEventQueue();
 });
 
@@ -463,6 +512,8 @@ function reconnectWebSocket() {
     avbtcSupplyContract.connect(provider);
     avusdxRequestManager.connect(provider);
     avusdxContract.connect(provider);
+    avbtcxRequestManager.connect(provider);
+    avbtcxContract.connect(provider);
 
     monitorWebSocket();
   }, 1000); 
