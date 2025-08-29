@@ -417,7 +417,7 @@ else if (eventType === 'avbtcxBoost') {
                 description: `
 **🔔 New Boost Order 📈**
 
-Amount: ${formattedAmount} avBTCx  
+Amount: ${formattedAmount} avBTC  
 Placed by: ${truncatedProvider}  
 New supply: ${formattedTotalSupply} avBTCx
 `,
