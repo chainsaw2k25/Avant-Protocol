@@ -300,10 +300,10 @@ color: 3447003
 
 else if (eventType === 'MintBTC') {
         const { minter, benefactor, beneficiary, collateralAsset, collateralAmount, avantcoinAmount } = args;
-        const formattedAvbtcAmount = formatNumber(Number(avantcoinAmount) / 10 ** 15, 8);
+        const formattedAvbtcAmount = formatNumber(Number(avantcoinAmount) / 10 ** 18, 4);
 
         const currentTotalSupply = await avbtcSupplyContract.totalSupply();
-        const formattedTotalSupply = formatNumber(Number(currentTotalSupply) / 10 ** 15, 8);
+        const formattedTotalSupply = formatNumber(Number(currentTotalSupply) / 10 ** 18, 2);
 
         const truncatedBeneficiary = `${beneficiary.slice(0, 6)}...${beneficiary.slice(-4)}`;
 
@@ -317,7 +317,7 @@ Amount: ${formattedAvbtcAmount} avBTC
 Placed by: ${truncatedBeneficiary}  
 New supply: ${formattedTotalSupply} avBTC
         `,
-        color: 15158332
+        color: 3066993
       }
     ]
   };
@@ -327,17 +327,17 @@ New supply: ${formattedTotalSupply} avBTC
         // savBTC Deposit
         const { sender, owner, assets, shares } = args;
        
-        const formattedAssets = formatNumber(Number(assets) / 10 ** 18, 8);
+        const formattedAssets = formatNumber(Number(assets) / 10 ** 18, 4);
 
   const stakedTotalSupply = await savbtcDepositContract.totalSupply(); 
   const totalMintSupply = await avbtcSupplyContract.totalSupply(); 
 
   const normalizedStaked = Number(stakedTotalSupply) / 10 ** 18;
-  const normalizedTotal = Number(totalMintSupply) / 10 ** 15;
+  const normalizedTotal = Number(totalMintSupply) / 10 ** 18;
 
   const percentage = ((normalizedStaked / normalizedTotal) * 100).toFixed(2);
-  const formattedStaked = formatNumber(normalizedStaked, 8);
 
+  const formattedStaked = formatNumber(normalizedStaked, 2);
   const truncatedOwner = `${owner.slice(0, 6)}...${owner.slice(-4)}`;
 
   const depositBTCMessage = {
@@ -350,7 +350,7 @@ Amount: ${formattedAssets} avBTC
 Placed by: ${truncatedOwner}  
 Staked: ${formattedStaked} avBTC (${percentage}%)
         `,
-        color: 9807270
+        color: 3447003
       }
     ]
   };
