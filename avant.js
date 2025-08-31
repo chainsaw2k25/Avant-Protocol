@@ -390,7 +390,7 @@ New supply: ${formattedTotalSupply} avBTCx
     } catch (error) {
       console.error('Error processing event:', error);
      }
-}, 1000); // <-- send max 1 per second
+}, 2000); // <-- send max 1 per second
 
 // --- Listeners ---
 
