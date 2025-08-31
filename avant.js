@@ -189,18 +189,15 @@ async function getDecimals(contract, fallback = 18) {
   }
 }
 
+// --- Queue System --- //
 const eventQueue = [];
-let processingQueue = false;
 
-// --- Queue Processor ---
+// Process 1 event per second
+setInterval(async () => {
+  if (eventQueue.length === 0) return;
 
-async function processEventQueue() {
-  if (processingQueue || eventQueue.length === 0) return;
-  processingQueue = true;
-
-  while (eventQueue.length > 0) {
-    const { eventType, args } = eventQueue.shift();
-    try {
+  const { eventType, args } = eventQueue.shift();
+  try {
       if (eventType === 'Mint') {
         const { minter, benefactor, beneficiary, collateralAsset, collateralAmount, avantcoinAmount } = args;
 
@@ -392,10 +389,8 @@ New supply: ${formattedTotalSupply} avBTCx
 
     } catch (error) {
       console.error('Error processing event:', error);
-    }
-  }
-  processingQueue = false;
-}
+     }
+}, 1000); // <-- send max 1 per second
 
 // --- Listeners ---
 
@@ -411,37 +406,31 @@ function setupListeners() {
   mintContract.on('Mint', (minter, benefactor, beneficiary, collateralAsset, collateralAmount, avantcoinAmount) => {
     console.log('Mint Event Detected:', { minter, benefactor, beneficiary, collateralAsset, collateralAmount, avantcoinAmount });
     eventQueue.push({ eventType: 'Mint', args: { minter, benefactor, beneficiary, collateralAsset, collateralAmount, avantcoinAmount } });
-    processEventQueue();
-  });
+    });
 
   depositContract.on('Deposit', (sender, owner, assets, shares) => {
     console.log('Deposit Event Detected:', { sender, owner, assets, shares });
     eventQueue.push({ eventType: 'Deposit', args: { sender, owner, assets, shares } });
-    processEventQueue();
   });
 
   avbtcMintContract.on('Mint', (minter, benefactor, beneficiary, collateralAsset, collateralAmount, avantcoinAmount) => {
     console.log('avBTC Mint Event:', { minter, benefactor, beneficiary, collateralAsset, collateralAmount, avantcoinAmount });
     eventQueue.push({ eventType: 'MintBTC', args: { minter, benefactor, beneficiary, collateralAsset, collateralAmount, avantcoinAmount } });
-    processEventQueue();
   });
 
   savbtcDepositContract.on('Deposit', (sender, owner, assets, shares) => {
     console.log('savBTC Deposit Event:', { sender, owner, assets, shares });
     eventQueue.push({ eventType: 'DepositBTC', args: { sender, owner, assets, shares } });
-    processEventQueue();
   });
 
   avusdxRequestManager.on('MintRequestCreated', (id, providerAddr, depositToken, amount, minMintAmount) => {
     console.log('avUSDx MintRequestCreated Event Detected:', { id, provider: providerAddr, depositToken, amount, minMintAmount });
-    eventQueue.push({ eventType: 'Boost', args: { provider: providerAddr, amount }  });
-    processEventQueue();  
+    eventQueue.push({ eventType: 'Boost', args: { provider: providerAddr, amount }  }); 
   });
 
   avbtcxRequestManager.on('MintRequestCreated', (id, providerAddr, depositToken, amount, minMintAmount) => {
     console.log('avBTCx MintRequestCreated Event Detected:', { id, provider: providerAddr, depositToken, amount, minMintAmount });
     eventQueue.push({ eventType: 'avbtcxBoost', args: { provider: providerAddr, amount } });
-    processEventQueue();
   });
 }
 
