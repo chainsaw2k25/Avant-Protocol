@@ -370,7 +370,7 @@ New supply: ${formattedTotalSupply} avBTC
             description: `
   **🔔 New MINT Order 📈**
   
-    Amount: ${formattedAvethAmount} 
+    Amount: ${formattedAvethAmount} avETH
     Placed by: ${truncatedBeneficiary}
     New supply: ${formattedTotalSupply} avETH
             `, 
