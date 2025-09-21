@@ -39,8 +39,23 @@ const avbtcMintABI = [
   }
 ];
 
+const avethMintABI = [
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "address", "name": "minter", "type": "address" },
+      { "indexed": true, "internalType": "address", "name": "benefactor", "type": "address" },
+      { "indexed": true, "internalType": "address", "name": "beneficiary", "type": "address" },
+      { "indexed": false, "internalType": "address", "name": "collateral_asset", "type": "address" },
+      { "indexed": false, "internalType": "uint256", "name": "collateral_amount", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "avantcoin_amount", "type": "uint256" }
+    ],
+    "name": "Mint",
+    "type": "event"
+  }
+];
+
 const savbtcDepositABI = [
-  // Deposit event (for listening)
   {
     "anonymous": false,
     "inputs": [
@@ -52,6 +67,7 @@ const savbtcDepositABI = [
     "name": "Deposit",
     "type": "event"
   },
+
   // Minimal ERC20 surface we need from the share token
   {
     "inputs": [],
@@ -92,6 +108,22 @@ const depositContractABI = [
   { "inputs": [], "name": "decimals",    "outputs": [{ "internalType": "uint8",   "name": "", "type": "uint8"    }], "stateMutability": "view", "type": "function" },
 ];
 
+const savethDepositABI = [
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "address", "name": "sender", "type": "address" },
+      { "indexed": true, "internalType": "address", "name": "owner", "type": "address" },
+      { "indexed": false, "internalType": "uint256", "name": "assets", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "shares", "type": "uint256" }
+    ],
+    "name": "Deposit",
+    "type": "event"
+  },
+  { "inputs": [], "name": "totalSupply", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" },
+  { "inputs": [], "name": "decimals",    "outputs": [{ "internalType": "uint8",   "name": "", "type": "uint8"    }], "stateMutability": "view", "type": "function" },
+];
+
 const requestManagerABI = [
   {
     anonymous: false,
@@ -106,7 +138,7 @@ const requestManagerABI = [
     type: "event",
   },
 ];
-
+const avethRequestManagerABI = requestManagerABI; // identical event
 const avbtcxRequestManagerABI = requestManagerABI; // identical event
 
 // --- Addresses from env ---
@@ -122,12 +154,22 @@ const avusdxAddress                  = process.env.AVUSDX_CONTRACT;             
 const avbtcxRequestManagerAddress    = process.env.AVBTCX_REQUEST_MANAGER;        // avBTCx request manager
 const avbtcxAddress                  = process.env.AVBTCX_CONTRACT;               // avBTCx token
 
+// Ethereum addresses for avETH, savETH, avETHx from env
+const avethMintAddress               = process.env.AVETH_MINT_CONTRACT;
+const savethDepositAddress           = process.env.SAVETH_DEPOSIT_CONTRACT; 
+const avethSupply                    = process.env.AVETH_TOKEN_CONTRACT;
+const avethxRequestManagerAddress    = process.env.AVETHX_REQUEST_MANAGER;
+const avethxAddress                  = process.env.AVETHX_CONTRACT;
+
+
 const AVALANCHE_WS_URL = process.env.AVALANCHE_WS_URL;
+const ETH_WS_URL = process.env.ETH_WS_URL;
 const discordWebhookUrl = process.env.DISCORD_WEBHOOK_URL; 
 
 // --- Provider & Contracts (reassigned on reconnect) ---
 
 let provider = new ethers.WebSocketProvider(AVALANCHE_WS_URL);
+let ethProvider = new ethers.WebSocketProvider(ETH_WS_URL);
 
 let mintContract;
 let depositContract;
@@ -140,8 +182,15 @@ let avusdxContract;
 let avbtcxRequestManager;
 let avbtcxContract;
 
+// Ethereum contracts
+let avethMintContract;
+let savethDepositContract;
+let avethSupplyContract;
+let avethxRequestManager;
+let avethxContract;
+
 // Create all contracts (and allow re-creation on reconnect)
-function createContracts() {
+function createAvaxContracts() {
   mintContract            = new ethers.Contract(mintContractAddress,         mintContractABI,            provider);
   depositContract         = new ethers.Contract(depositContractAddress,      depositContractABI,         provider);
   SupplyContract          = new ethers.Contract(SupplyContractAddress,       erc20ABI,                   provider); // avUSD ERC20
@@ -153,8 +202,17 @@ function createContracts() {
   avbtcxRequestManager    = new ethers.Contract(avbtcxRequestManagerAddress, avbtcxRequestManagerABI,    provider);
   avbtcxContract          = new ethers.Contract(avbtcxAddress,               erc20ABI,                   provider); // avBTCx ERC20
 }
+function createEthContracts() {
+  avethMintContract       = new ethers.Contract(avethMintAddress,            avethMintABI,            ethProvider);
+  savethDepositContract   = new ethers.Contract(savethDepositAddress,        savethDepositABI,        ethProvider);
+  avethSupplyContract     = new ethers.Contract(avethSupply,                 erc20ABI,                ethProvider);
+  avethxRequestManager    = new ethers.Contract(avethxRequestManagerAddress, avethRequestManagerABI,  ethProvider);
+  avethxContract          = new ethers.Contract(avethxAddress,               erc20ABI,                ethProvider);
+}
 
-createContracts();
+
+createAvaxContracts();
+createEthContracts();
 
 // --- Express ---
 
@@ -192,11 +250,14 @@ async function getDecimals(contract, fallback = 18) {
 // --- Queue System --- //
 const eventQueue = [];
 
-// Process 1 event per second
+// Process 1 event per 2 second
 setInterval(async () => {
   if (eventQueue.length === 0) return;
 
   const { eventType, args } = eventQueue.shift();
+
+  console.log(`Queue pop -> eventType: ${eventType}, queue remaining: ${eventQueue.length}`);
+
   try {
       if (eventType === 'Mint') {
         const { minter, benefactor, beneficiary, collateralAsset, collateralAmount, avantcoinAmount } = args;
@@ -225,6 +286,7 @@ New supply: ${formattedTotalSupply} avUSD
         };
         await sendToWebhook(mintMessage);
       }
+
 
       else if (eventType === 'Deposit') {
         const { sender, owner, assets, shares } = args;
@@ -291,6 +353,36 @@ New supply: ${formattedTotalSupply} avBTC
         await sendToWebhook(mintBTCMessage);
       }
 
+      else if (eventType === 'MintETH') {
+      const { minter, benefactor, beneficiary, collateralAsset, collateralAmount, avantcoinAmount } = args;
+
+      const avethdecimals = await getDecimals(avethSupplyContract, 18);
+      const formattedAvethAmount = formatNumber(parseFloat(ethers.formatUnits(avantcoinAmount, avethdecimals)));
+      
+      const currentTotalSupply = await avethSupplyContract.totalSupply();
+      const formattedTotalSupply = formatNumber(parseFloat(ethers.formatUnits(currentTotalSupply, avethdecimals)));
+      
+      const truncatedBeneficiary = `${beneficiary.slice(0, 6)}...${beneficiary.slice(-4)}`;
+      
+      const mintETHMessage = {
+        embeds: [
+          { 
+            description: `
+  **🔔 New MINT Order 📈**
+  
+    Amount: ${formattedAvethAmount} 
+    Placed by: ${truncatedBeneficiary}
+    New supply: ${formattedTotalSupply} avETH
+            `, 
+    
+          color: 3066993 
+        }
+      ]
+    };
+      await sendToWebhook(mintETHMessage);
+    }
+
+
       else if (eventType === 'DepositBTC') {
         const { sender, owner, assets, shares } = args;
 
@@ -327,6 +419,44 @@ Staked: ${formattedStaked} avBTC (${percentage}%)
         await sendToWebhook(depositBTCMessage);
       }
 
+    else if (eventType === 'DepositETH') {
+      const { sender, owner, assets, shares } = args;
+
+      const savethShareDecimals = await getDecimals(savethDepositContract, 18);
+      const formattedAssets = formatNumber(parseFloat(ethers.formatUnits(assets, savethShareDecimals)), 4);
+
+      const stakedTotalSupply = await savethDepositContract.totalSupply();
+      const totalMintSupply = await avethSupplyContract.totalSupply();
+
+      const normalizedStaked = parseFloat(ethers.formatUnits(stakedTotalSupply, savethShareDecimals));
+      const avethDecimals = await getDecimals(avethSupplyContract, 18);
+      const normalizedTotal = parseFloat(ethers.formatUnits(totalMintSupply, avethDecimals));
+      
+      const percentage = normalizedTotal > 0 ? ((normalizedStaked / normalizedTotal) * 100).toFixed(2) : "0.00";
+      const formattedStaked = formatNumber(normalizedStaked, 2);
+
+      const truncatedOwner = `${owner.slice(0, 6)}...${owner.slice(-4)}`;
+      
+      const depositETHMessage = {
+        embeds: [
+          { 
+            description: `
+            
+    **📥 New STAKE Event! 📈**
+    
+        Amount: ${formattedAssets} avETH
+        Placed by: ${truncatedOwner}
+        Staked: ${formattedStaked} avETH (${percentage}%)
+        `, 
+        
+        color: 3447003 
+      }
+    ]
+  };
+      await sendToWebhook(depositETHMessage);
+    }
+
+
       else if (eventType === 'Boost') {
         const { provider: boostProvider, amount } = args;
 
@@ -357,6 +487,7 @@ New supply: ${formattedTotalSupply} avUSDx
         await sendToWebhook(boostMessage);
       }
 
+
       else if (eventType === 'avbtcxBoost') {
         const { provider: boostProvider, amount } = args;
 
@@ -369,7 +500,7 @@ New supply: ${formattedTotalSupply} avUSDx
         const totalSupply = await avbtcxContract.totalSupply();
         const formattedTotalSupply = formatNumber(parseFloat(ethers.formatUnits(totalSupply, decimals)), 2);
 
-        const boostMessage = {
+        const boostBTCXMessage = {
           embeds: [
             {
               description: `
@@ -384,18 +515,47 @@ New supply: ${formattedTotalSupply} avBTCx
           ]
         };
 
-        await sendToWebhook(boostMessage);
+        await sendToWebhook(boostBTCXMessage);
       }
+
+else if (eventType === 'avethxBoost') {
+      const { provider: boostProvider, amount } = args;
+
+      const decimals = await getDecimals(avethxContract, 18);
+      const formattedAmount = formatNumber(parseFloat(ethers.formatUnits(amount, decimals)), 4);
+     
+      const truncatedProvider = `${boostProvider.slice(0, 6)}...${boostProvider.slice(-4)}`;
+
+      const totalSupply = await avethxContract.totalSupply();
+      const formattedTotalSupply = formatNumber(parseFloat(ethers.formatUnits(totalSupply, decimals)), 2);
+     
+      const boostETHMessage = {
+        embeds: [
+          { 
+            description: `
+  **🔔 New Boost Order 📈**
+  
+  Amount: ${formattedAmount} avETH
+  Placed by: ${truncatedProvider}
+  New supply: ${formattedTotalSupply} avETHx
+    `, 
+    color: 0xFF69B4 
+      }
+    ]
+   };
+    
+      await sendToWebhook(boostETHMessage);
+    }
+
 
     } catch (error) {
       console.error('Error processing event:', error);
      }
-}, 2000); // <-- send max 1 per second
+}, 2000); // <-- send max 1 per 2 second
 
 // --- Listeners ---
 
-function setupListeners() {
-  // Remove old listeners to avoid duplicates after reconnect
+function setupAvaxListeners() {
   mintContract.removeAllListeners();
   depositContract.removeAllListeners();
   avbtcMintContract.removeAllListeners();
@@ -403,6 +563,8 @@ function setupListeners() {
   avusdxRequestManager.removeAllListeners();
   avbtcxRequestManager.removeAllListeners();
 
+
+ // Avalanche listeners
   mintContract.on('Mint', (minter, benefactor, beneficiary, collateralAsset, collateralAmount, avantcoinAmount) => {
     console.log('Mint Event Detected:', { minter, benefactor, beneficiary, collateralAsset, collateralAmount, avantcoinAmount });
     eventQueue.push({ eventType: 'Mint', args: { minter, benefactor, beneficiary, collateralAsset, collateralAmount, avantcoinAmount } });
@@ -434,7 +596,30 @@ function setupListeners() {
   });
 }
 
-setupListeners();
+function setupEthListeners() {
+  avethMintContract.removeAllListeners();
+  savethDepositContract.removeAllListeners();
+  avethxRequestManager.removeAllListeners();
+
+// Ethereum listeners
+  avethMintContract.on('Mint', (minter, benefactor, beneficiary, collateralAsset, collateralAmount, avantcoinAmount) => {
+    console.log('avETH Mint Event:', { minter, benefactor, beneficiary, collateralAsset, collateralAmount, avantcoinAmount });
+    eventQueue.push({ eventType: 'MintETH', args: { minter, benefactor, beneficiary, collateralAsset, collateralAmount, avantcoinAmount } });
+  });
+
+  savethDepositContract.on('Deposit', (sender, owner, assets, shares) => {
+    console.log('savETH Deposit Event:', { sender, owner, assets, shares });
+    eventQueue.push({ eventType: 'DepositETH', args: { sender, owner, assets, shares } });
+  });
+
+  avethxRequestManager.on('MintRequestCreated', (id, providerAddr, depositToken, amount, minMintAmount) => {
+    console.log('avETHx MintRequestCreated Event Detected:', { id, provider: providerAddr, depositToken, amount, minMintAmount });
+    eventQueue.push({ eventType: 'avethxBoost', args: { provider: providerAddr, amount } });
+  });
+}
+
+setupAvaxListeners();
+setupEthListeners();
 
 // --- Server ---
 
@@ -446,41 +631,65 @@ app.listen(port, '0.0.0.0', () => {
   console.log(`Server running on port ${port}`);
 });
 
-// --- WS Monitoring & Reconnect (ethers v6 safe) ---
 
-function monitorWebSocket() {
-  provider.on("network", (newNetwork, oldNetwork) => {
+// --- WS Monitoring & Reconnect (for Avalanche & Ethereum) ---
+
+function monitorProvider(wsProvider, name, onReconnect) {
+  // ethers v6 WebSocketProvider doesn't use 'connect'/'close' events consistently,
+  // so rely on 'network' changes and inspect the internal websocket for close/error.
+  wsProvider.on("network", (newNetwork, oldNetwork) => {
     if (oldNetwork) {
-      console.log(`🌐 Network changed from ${oldNetwork.name} to ${newNetwork.name}`);
-      reconnectWebSocket();
+      console.log(`[${name}] Network changed from ${oldNetwork.name} to ${newNetwork.name}`);
+      onReconnect();
     }
+  });
+
+  // optionally: if provider's underlying websocket exists, listen for errors/closes
+  wsProvider._websocket?.on?.('error', (err) => {
+    console.error(`[${name}] WebSocket error:`, err);
+    onReconnect();
+  });
+
+  wsProvider._websocket?.on?.('close', (code) => {
+    console.error(`[${name}] WebSocket closed. Code:`, code);
+    onReconnect();
   });
 }
 
-function reconnectWebSocket() {
+function reconnectAvalanche() {
   setTimeout(() => {
-    console.log("🔄 Reconnecting WebSocket...");
-
-    // Recreate provider
+    console.log("[avalanche] Reconnecting...");
+    try { provider.destroy?.(); } catch (_) {}
     provider = new ethers.WebSocketProvider(AVALANCHE_WS_URL);
-
-    // Recreate contracts and listeners bound to the new provider
-    createContracts();
-    setupListeners();
-    monitorWebSocket();
+    createAvaxContracts();
+    setupAvaxListeners();
+    monitorProvider(provider, 'avalanche', reconnectAvalanche);
   }, 1000);
 }
 
-monitorWebSocket();
+function reconnectEthereum() {
+  setTimeout(() => {
+    console.log("[ethereum] Reconnecting...");
+    try { ethProvider.destroy?.(); } catch (_) {}
+    ethProvider = new ethers.WebSocketProvider(ETH_WS_URL);
+    createEthContracts();
+    setupEthListeners();
+    monitorProvider(ethProvider, 'ethereum', reconnectEthereum);
+  }, 1000);
+}
 
-// Periodic health check (main way to detect drops in v6)
+// start monitors
+monitorProvider(provider, 'avalanche', reconnectAvalanche);
+monitorProvider(ethProvider, 'ethereum', reconnectEthereum);
+
+// Periodic health checks
 setInterval(() => {
   provider.getBlockNumber()
-    .then((blockNumber) => {
-      console.log(`✅ WebSocket alive. Current block: ${blockNumber}`);
-    })
-    .catch((error) => {
-      console.error("⚠️ WebSocket check failed:", error);
-      reconnectWebSocket();
-    });
+    .then((bn) => console.log(`avalanche WebSocket alive. Block: ${bn}`))
+    .catch((err) => { console.error('avalanche WS check failed:', err); reconnectAvalanche(); });
+
+  ethProvider.getBlockNumber()
+    .then((bn) => console.log(`ethereum WebSocket alive. Block: ${bn}`))
+    .catch((err) => { console.error('ethereum WS check failed:', err); reconnectEthereum(); });
+
 }, 300000); // every 5 mins
