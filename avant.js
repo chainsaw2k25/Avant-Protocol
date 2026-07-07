@@ -72,6 +72,19 @@ const requestManagerABI = [
       { indexed: true,  internalType: "uint256", name: "id",            type: "uint256" },
       { indexed: true,  internalType: "address", name: "provider",      type: "address" },
       { indexed: false, internalType: "address", name: "depositToken",  type: "address" },
+      { indexed: false, internalType: "uint256", name: "amount",        type: "uint256" },,
+    ],
+    name: "MintRequestCreated",
+    type: "event",
+  },
+];
+const avethRequestManagerABI = [
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true,  internalType: "uint256", name: "id",            type: "uint256" },
+      { indexed: true,  internalType: "address", name: "provider",      type: "address" },
+      { indexed: false, internalType: "address", name: "depositToken",  type: "address" },
       { indexed: false, internalType: "uint256", name: "amount",        type: "uint256" },
       { indexed: false, internalType: "uint256", name: "minMintAmount", type: "uint256" },
     ],
@@ -79,8 +92,8 @@ const requestManagerABI = [
     type: "event",
   },
 ];
-const avethRequestManagerABI = requestManagerABI; // identical event
-const avbtcxRequestManagerABI = requestManagerABI; // identical event
+
+const avbtcxRequestManagerABI = avethRequestManagerABI; // identical event
 
 // --- Addresses from env ---
 
@@ -526,8 +539,8 @@ function setupAvaxListeners() {
     eventQueue.push({ eventType: 'DepositBTC', args: { sender, owner, assets, shares } });
   });
 
-  avusdxRequestManager.on('MintRequestCreated', (id, providerAddr, depositToken, amount, minMintAmount) => {
-    console.log('avUSDx MintRequestCreated Event Detected:', { id, provider: providerAddr, depositToken, amount, minMintAmount });
+  avusdxRequestManager.on('MintRequestCreated', (id, providerAddr, depositToken, amount) => {
+    console.log('avUSDx MintRequestCreated Event Detected:', { id, provider: providerAddr, depositToken, amount });
     eventQueue.push({ eventType: 'Boost', args: { provider: providerAddr, amount }  }); 
   });
 
