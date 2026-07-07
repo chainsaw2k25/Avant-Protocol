@@ -23,37 +23,8 @@ const mintContractABI = [
   }
 ];
 
-const avbtcMintABI = [
-  {
-    "anonymous": false,
-    "inputs": [
-      { "indexed": true, "internalType": "address", "name": "minter", "type": "address" },
-      { "indexed": true, "internalType": "address", "name": "benefactor", "type": "address" },
-      { "indexed": true, "internalType": "address", "name": "beneficiary", "type": "address" },
-      { "indexed": false, "internalType": "address", "name": "collateral_asset", "type": "address" },
-      { "indexed": false, "internalType": "uint256", "name": "collateral_amount", "type": "uint256" },
-      { "indexed": false, "internalType": "uint256", "name": "avantcoin_amount", "type": "uint256" }
-    ],
-    "name": "Mint",
-    "type": "event"
-  }
-];
-
-const avethMintABI = [
-  {
-    "anonymous": false,
-    "inputs": [
-      { "indexed": true, "internalType": "address", "name": "minter", "type": "address" },
-      { "indexed": true, "internalType": "address", "name": "benefactor", "type": "address" },
-      { "indexed": true, "internalType": "address", "name": "beneficiary", "type": "address" },
-      { "indexed": false, "internalType": "address", "name": "collateral_asset", "type": "address" },
-      { "indexed": false, "internalType": "uint256", "name": "collateral_amount", "type": "uint256" },
-      { "indexed": false, "internalType": "uint256", "name": "avantcoin_amount", "type": "uint256" }
-    ],
-    "name": "Mint",
-    "type": "event"
-  }
-];
+const avbtcMintABI = mintContractABI;
+const avethMintABI = mintContractABI;
 
 const savbtcDepositABI = [
   {
@@ -91,38 +62,8 @@ const erc20ABI = [
   { "inputs": [], "name": "decimals",    "outputs": [{ "internalType": "uint8",   "name": "", "type": "uint8"    }], "stateMutability": "view", "type": "function" },
 ];
 
-// For deposit contracts you also query for totalSupply/decimals (share token) + the Deposit event
-const depositContractABI = [
-  {
-    "anonymous": false,
-    "inputs": [
-      { "indexed": true, "internalType": "address", "name": "sender", "type": "address" },
-      { "indexed": true, "internalType": "address", "name": "owner", "type": "address" },
-      { "indexed": false, "internalType": "uint256", "name": "assets", "type": "uint256" },
-      { "indexed": false, "internalType": "uint256", "name": "shares", "type": "uint256" }
-    ],
-    "name": "Deposit",
-    "type": "event"
-  },
-  { "inputs": [], "name": "totalSupply", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" },
-  { "inputs": [], "name": "decimals",    "outputs": [{ "internalType": "uint8",   "name": "", "type": "uint8"    }], "stateMutability": "view", "type": "function" },
-];
-
-const savethDepositABI = [
-  {
-    "anonymous": false,
-    "inputs": [
-      { "indexed": true, "internalType": "address", "name": "sender", "type": "address" },
-      { "indexed": true, "internalType": "address", "name": "owner", "type": "address" },
-      { "indexed": false, "internalType": "uint256", "name": "assets", "type": "uint256" },
-      { "indexed": false, "internalType": "uint256", "name": "shares", "type": "uint256" }
-    ],
-    "name": "Deposit",
-    "type": "event"
-  },
-  { "inputs": [], "name": "totalSupply", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" },
-  { "inputs": [], "name": "decimals",    "outputs": [{ "internalType": "uint8",   "name": "", "type": "uint8"    }], "stateMutability": "view", "type": "function" },
-];
+const depositContractABI = savbtcDepositABI;
+const savethDepositABI = savbtcDepositABI;
 
 const requestManagerABI = [
   {
