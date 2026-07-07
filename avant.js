@@ -72,7 +72,7 @@ const requestManagerABI = [
       { indexed: true,  internalType: "uint256", name: "id",            type: "uint256" },
       { indexed: true,  internalType: "address", name: "provider",      type: "address" },
       { indexed: false, internalType: "address", name: "depositToken",  type: "address" },
-      { indexed: false, internalType: "uint256", name: "amount",        type: "uint256" },,
+      { indexed: false, internalType: "uint256", name: "amount",        type: "uint256" },
     ],
     name: "MintRequestCreated",
     type: "event",
